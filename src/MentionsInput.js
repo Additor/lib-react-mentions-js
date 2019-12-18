@@ -297,74 +297,60 @@ class MentionsInput extends React.Component {
 
   // Handle input element's change event
   handleChange = ev => {
-    // if we are inside iframe, we need to find activeElement within its contentDocument
-    const currentDocument =
-      (document.activeElement && document.activeElement.contentDocument) ||
-      document
-    if (currentDocument.activeElement !== ev.target) {
+
+    if (document.activeElement !== ev.target) {
       // fix an IE bug (blur from empty input element with placeholder attribute trigger "input" event)
-      return
+      return;
     }
 
-    const value = this.props.value || ''
-    const { markup, displayTransform, regex } = this.props
-
-    let newPlainTextValue = ev.target.value
+    var value = this.props.value || "";
+    var newPlainTextValue = ev.target.value;
 
     // Derive the new value to set by applying the local change in the textarea's plain text
-    let newValue = applyChangeToValue(
-      value,
-      markup,
-      newPlainTextValue,
-      this.state.selectionStart,
-      this.state.selectionEnd,
-      ev.target.selectionEnd,
-      displayTransform,
-      regex
-    )
+    var selectionEnd = ev.target.selectionEnd;
+    var isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+    var isWindow = navigator.platform.indexOf('Win') > -1;
+    if (isChrome && isWindow) {
+      selectionEnd = newPlainTextValue.length;
+    }
+
+    var newValue = applyChangeToValue(value, this.props.markup, newPlainTextValue, this.state.selectionStart, this.state.selectionEnd, selectionEnd, this.props.displayTransform);
 
     // In case a mention is deleted, also adjust the new plain text value
-    newPlainTextValue = getPlainText(newValue, markup, displayTransform, regex)
+    newPlainTextValue = getPlainText(newValue, this.props.markup, this.props.displayTransform);
 
     // Save current selection after change to be able to restore caret position after rerendering
-    let selectionStart = ev.target.selectionStart
-    let selectionEnd = ev.target.selectionEnd
-    let setSelectionAfterMentionChange = false
+    var selectionStart = ev.target.selectionEnd;
+    if (isChrome && isWindow) {
+      selectionStart = newPlainTextValue.length;
+    }
+    var setSelectionAfterMentionChange = false;
 
     // Adjust selection range in case a mention will be deleted by the characters outside of the
     // selection range that are automatically deleted
-    let startOfMention = findStartOfMentionInPlainText(
-      value,
-      markup,
-      selectionStart,
-      displayTransform,
-      regex
-    )
+    var startOfMention = findStartOfMentionInPlainText(value, this.props.markup, selectionStart, this.props.displayTransform);
 
-    if (
-      startOfMention !== undefined &&
-      this.state.selectionEnd > startOfMention
-    ) {
+    if (startOfMention !== undefined && this.state.selectionEnd > startOfMention) {
       // only if a deletion has taken place
-      selectionStart = startOfMention
-      selectionEnd = selectionStart
-      setSelectionAfterMentionChange = true
+      selectionStart = startOfMention;
+      selectionEnd = selectionStart;
+      setSelectionAfterMentionChange = true;
     }
 
     this.setState({
-      selectionStart,
-      selectionEnd,
-      setSelectionAfterMentionChange: setSelectionAfterMentionChange,
-    })
+      selectionStart: selectionStart,
+      selectionEnd: selectionEnd,
+      setSelectionAfterMentionChange: setSelectionAfterMentionChange
+    });
 
-    let mentions = getMentions(newValue, markup, displayTransform, regex)
+    var mentions = getMentions(newValue, this.props.markup);
 
     // Propagate change
     // let handleChange = this.getOnChange(this.props) || emptyFunction;
-    let eventMock = { target: { value: newValue } }
+    var eventMock = { target: { value: newValue } };
     // this.props.onChange.call(this, eventMock, newValue, newPlainTextValue, mentions);
-    this.executeOnChange(eventMock, newValue, newPlainTextValue, mentions)
-  }
+    this.executeOnChange(eventMock, newValue, newPlainTextValue, mentions);
+  };
 
   // Handle input element's select event
   handleSelect = ev => {
